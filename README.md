@@ -1,2 +1,3 @@
 # crypto-trader
-Crypto trading bot in Node &amp; Typescript
+
+Crypto trading bot in Node.js with Typescript.
