@@ -1,24 +1,9 @@
 import config from "./config";
 import axios from "axios";
-import sql from "./db";
+import sql, { insertInto } from "./db";
 import postgres from "postgres";
 
-const cbPricesUrl = "https://api.coinbase.com/v2/prices";
-
-const getBuyPrice = async (currencyPair: string) => {
-  const res = await axios.get(`${cbPricesUrl}/${currencyPair}/buy`);
-  return res.data.data.amount as Number;
-};
-
-const getSellPrice = async (currencyPair: string) => {
-  const res = await axios.get(`${cbPricesUrl}/${currencyPair}/sell`);
-  return res.data.data.amount;
-};
-
-const getSpotPrice = async (currencyPair: string) => {
-  const res = await axios.get(`${cbPricesUrl}/${currencyPair}/spot`);
-  return res.data.data.amount;
-};
+import { getPrices } from "./prices";
 
 const delay = async (time: number): Promise<void> => {
   return new Promise((resolve, reject) => {
@@ -31,12 +16,22 @@ const delay = async (time: number): Promise<void> => {
 };
 
 const mainLoop = async () => {
-  let btcBuyPrice = (await getBuyPrice("btc-usd")) as number;
-  console.log("Buy Price", btcBuyPrice);
-  let btcSellPrice = (await getSellPrice("btc-usd")) as number;
-  console.log("Sell Price", btcSellPrice);
-  let btcSpotPrice = (await getSpotPrice("btc-usd")) as number;
-  console.log("Spot Price: ", btcSpotPrice);
+  // Fetch price
+  const [buyPrice, sellPrice, spotPrice] = await getPrices();
+  console.log([buyPrice, sellPrice, spotPrice]);
+
+  // Insert data into DB
+  let row = await insertInto("BTC", "USD", buyPrice, sellPrice, spotPrice, Date.now());
+  console.log("DB INSERT INTO: ", row);
+  //   const row = await sql`
+  //   INSERT INTO crypto_trader
+  //       (crypto, currency, buy_price, sell_price, spot_price, timestamp)
+  //   VALUES
+  //       ('btc-usd', ${btcBuyPrice})
+  //   returning currency, value
+  //   `;
+  // console.log(intertion);
+
   const timeInterval = 10 * 1000;
   await delay(timeInterval);
   mainLoop();
@@ -44,15 +39,6 @@ const mainLoop = async () => {
 
 export const start = async () => {
   mainLoop();
-
-  //   const intertion = await sql`
-  //     insert into crypto_test
-  //         (currency, value)
-  //     values
-  //         ('btc-usd', ${btcBuyPrice})
-  //     returning currency, value
-  //     `;
-  //   console.log(intertion);
 };
 
 start();
